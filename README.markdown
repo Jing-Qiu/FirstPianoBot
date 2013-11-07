@@ -8,7 +8,7 @@ Building Instructions
 
 1. PianoBot uses a 4x4 chassis as its base. Instructions for building one can be found on the NXT Programs [website](http://www.nxtprograms.com/4x4_chassis/steps.html).
 2. Follow steps 10-11 found [here](http://www.nxtprograms.com/4x4_joystick/steps.html) to mount the NXT brick on the chassis.
-3. Up-close pictures of the robot's "finger" can be found on my [Flickr page](http://www.flickr.com/photos/mattrajca/sets/72157624659077834/). The motor powering the "finger" should be connected to port A, while the other motors should be connected to ports B and C, respectively.
+3.The motor powering the "finger" should be connected to port A, while the other motors should be connected to ports B and C, respectively.
 4. The source of the NXC program can be found in this git repository under the PianoBot subfolder. Change the `FILE_TO_PLAY` constant to match the name of the song file you wish to play.
 
 Usage
