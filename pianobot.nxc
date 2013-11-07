@@ -1,0 +1,145 @@
+#define FINGER_PORT OUT_A
+#define MOTOR_PORTS OUT_BC
+
+#define MIDDLE_C 22
+
+#define DEG_PER_KEY 46
+
+// Constants defined below should be adjusted for different surfaces and battery levels
+
+#define HIT_POWER 30
+#define HIT_RELEASE_POWER 30
+#define MOVE_POWER 30
+
+#define HIT_RELEASE_ANGLE -40
+
+struct Note {
+	// The note value is different from the typical MIDI range of 1-127
+	// It should always be greater than 0
+	// To find the value: 7 * OCTAVE_NUMBER + NOTE_NUMBER
+	// NOTE_NUMBER ranges from 1-7 (inclusive), with 1 being a 'C'
+	byte value;
+	
+	// The duration is specified in milliseconds
+	unsigned int duration;
+};
+
+// Before playing any song, the robot's "finger" should be lined up with the middle-C
+byte currentNote = MIDDLE_C;
+mutex fingerMotion;
+
+void moveToKey (const byte noteVal) {
+	int delta = noteVal - currentNote;
+	
+	RotateMotorExPID(MOTOR_PORTS, MOVE_POWER, DEG_PER_KEY * delta * -1, 0, true, true, 20, 50, 90);
+	
+	currentNote = noteVal;
+}
+
+void waitForMotorOverload (const byte ports) {
+	while (true) {
+		long currCount = MotorRotationCount(ports);
+		
+		Wait(40);
+		
+		if (currCount == MotorRotationCount(ports)) {
+			break;
+		}
+	}
+}
+
+task releaseKey() {
+	Acquire(fingerMotion);
+	RotateMotorPID(FINGER_PORT, HIT_RELEASE_POWER, HIT_RELEASE_ANGLE, 40, 50, 90);
+	Release(fingerMotion);
+}
+
+void hitKey (const unsigned int noteDuration) {
+	Acquire(fingerMotion);
+	
+	ResetRotationCount(FINGER_PORT);
+	OnFwd(FINGER_PORT, HIT_POWER);
+	waitForMotorOverload(FINGER_PORT);
+	
+	Release(fingerMotion);
+	
+	Wait(noteDuration);
+	
+	start releaseKey;
+	
+	// Give the finger some time to lift itself before moving
+	Wait(150);
+}
+
+Note NoteWithLine (const string line) {
+	Note newNote;
+	
+	string currNum = "";
+	unsigned int numCount = 0;
+	
+	for (unsigned int n = 0; n < StrLen(line); n++) {
+		string v = SubStr(line, n, 1);
+		
+		if (v != " ") {
+			currNum = StrCat(currNum, v);
+		}
+		else {
+			if (numCount == 0) {
+				newNote.value = StrToNum(currNum);
+			}
+			else if (numCount == 1) {
+				newNote.duration = StrToNum(currNum);
+			}
+			
+			currNum = "";
+			numCount++;
+		}
+	}
+	
+	return newNote;
+}
+
+bool playSong (const string filename) {
+	unsigned int fSize = 0;
+	byte fHandle = 0;
+	
+	if (OpenFileRead(filename, fSize, fHandle) != NO_ERR) {
+		return false;
+	}
+	
+	string lineString;
+	
+	while (ReadLnString(fHandle, lineString) == NO_ERR) {
+		Note note = NoteWithLine(lineString);
+		
+		if (note.value == 0) {
+			Wait(note.duration); // this is simply a rest
+		}
+		else {
+			moveToKey(note.value);
+			hitKey(note.duration);
+		}
+	}
+	
+	CloseFile(fHandle);
+	
+	return true;
+}
+
+void terminate() {
+	Wait(100);
+	Off(OUT_ABC);
+	Wait(100);
+}
+
+const string FILE_TO_PLAY = "twinkle.sng";
+
+task main() {
+	if (!playSong(FILE_TO_PLAY)) {
+		goto exit;
+	}
+	
+	terminate();
+	
+  exit:
+}
