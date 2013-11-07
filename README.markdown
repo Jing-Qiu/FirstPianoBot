@@ -1,7 +1,7 @@
 PianoBot
 ========
 
-A simple NXT robot that can play a given tune on a piano keyboard. Watch a [video](http://vimeo.com/13061942) of it in action!
+A simple NXT robot that can play a given tune on a piano keyboard.
 
 Building Instructions
 ---------------------
